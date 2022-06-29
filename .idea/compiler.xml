@@ -7,6 +7,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="habari-plugin-directory" />
+        <module name="habari-plugin-system" />
       </profile>
     </annotationProcessing>
   </component>
