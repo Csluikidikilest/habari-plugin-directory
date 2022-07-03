@@ -1,10 +1,10 @@
 package org.qazima.habari.pluginsystem.directory;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.sun.net.httpserver.HttpContext;
+import com.sun.net.httpserver.HttpExchange;
 import org.apache.http.HttpStatus;
-import org.qazima.habari.pluginsystem.interfaces.IReadOnlyConfiguration;
 import org.qazima.habari.pluginsystem.interfaces.IPlugin;
+import org.qazima.habari.pluginsystem.interfaces.IReadOnlyConfiguration;
 import org.qazima.habari.pluginsystem.library.Content;
 
 import java.io.File;
@@ -28,45 +28,45 @@ public class Plugin implements IPlugin {
     }
 
     @Override
-    public int process(HttpContext httpContext, Content content) {
-        int statusCode = HttpStatus.SC_OK;
-        String localPath = ((Configuration)getConfiguration()).getPath();
-        String remotePath = httpContext.getPath().substring(1).replace('/', File.separatorChar);
+    public int process(HttpExchange exchange, Content content) {
+        String localPath = ((Configuration) getConfiguration()).getPath();
+        String remotePath = exchange.getRequestURI().toString().replace('/', File.separatorChar);
         String fileName = Path.of(localPath, remotePath).toString();
-        if(fileName.endsWith(File.separator)) {
-            String defaultPage = ((Configuration)getConfiguration()).getDefaultPages().stream().filter(dp -> new File(Path.of(localPath, remotePath, dp).toString()).exists()).findFirst().orElse("");
+        if (remotePath.endsWith(File.separator)) {
+            String defaultPage = ((Configuration) getConfiguration()).getDefaultPages().stream().filter(dp -> new File(Path.of(localPath, remotePath, dp).toString()).exists()).findFirst().orElse("");
             fileName = Path.of(localPath, remotePath, defaultPage).toString();
         }
 
         File file = new File(fileName);
-        if(file.exists()) {
+        if (file.exists()) {
             try {
                 content.setType(URLConnection.guessContentTypeFromName(file.getName()));
+                content.setStatusCode(HttpStatus.SC_OK);
                 FileInputStream fileInputStream = new FileInputStream(file);
                 content.setBody(fileInputStream.readAllBytes());
                 fileInputStream.close();
-            } catch (Exception e){
-                statusCode = HttpStatus.SC_INTERNAL_SERVER_ERROR;
+            } catch (Exception e) {
+                content.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
                 content.setType("text/plain");
                 content.setBody(e.toString().getBytes(StandardCharsets.UTF_8));
             }
         } else {
-            statusCode = HttpStatus.SC_NOT_FOUND;
+            content.setStatusCode(HttpStatus.SC_NOT_FOUND);
             content.setType("text/plain");
             content.setBody("".getBytes(StandardCharsets.UTF_8));
         }
 
-        return statusCode;
+        return content.getStatusCode();
     }
 
     @Override
-    public int processConfigure(HttpContext httpContext, Content content) {
+    public int processConfigure(HttpExchange exchange, Content content) {
         int statusCode = HttpStatus.SC_OK;
         return statusCode;
     }
 
     @Override
-    public int processMetadata(HttpContext httpContext, Content content) {
+    public int processMetadata(HttpExchange exchange, Content content) {
         int statusCode = HttpStatus.SC_OK;
         return statusCode;
     }
